@@ -10,9 +10,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import co.renegadeeagle.app.toontowninvasiontracker.InvasionData.DistrictInfo;
-import co.renegadeeagle.app.toontowninvasiontracker.InvasionData.Invasions;
+import java.util.Scanner;
 
+import co.renegadeeagle.app.toontowninvasiontracker.InvasionData.District;
+import co.renegadeeagle.app.toontowninvasiontracker.InvasionData.DistrictInfo;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -26,7 +27,7 @@ import android.widget.TextView;
 public class CurrentInvasions extends Activity {
 
 	Gson gson = new Gson();
-	public static InvasionData data;
+	private static InvasionData data;
 	public static Map<String, DistrictInfo> invasionInfo;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +54,8 @@ public class CurrentInvasions extends Activity {
 	 */
 	public void update() {
 		try{
-			url = new URL("https://www.toontownrewritten.com/api/invasions");
+			url = new URL("http://renegadeeagle.co/testjson");
+			//http://renegadeeagle.co/testjson
 			HttpURLConnection con = (HttpURLConnection) url.openConnection();
 			con.setRequestMethod("GET");
 
@@ -78,29 +80,16 @@ public class CurrentInvasions extends Activity {
 			for (Map.Entry<String,JsonElement> entry : invasionObject.entrySet()) {
 				activeDistricts.add(entry.getKey());
 			}
-			Map<String, DistrictInfo> invasionsPerDistrict = new HashMap<String, DistrictInfo>();
+
+			List<District> districts = new ArrayList<District>();
 			for(String districtName : activeDistricts){
 				String asOf = invasionObject.getAsJsonObject(districtName).get("asOf").getAsString();
 				String type = invasionObject.getAsJsonObject(districtName).get("type").getAsString();
 				String progress = invasionObject.getAsJsonObject(districtName).get("progress").getAsString();
-				DistrictInfo di = new DistrictInfo(asOf, type, progress);
-				invasionsPerDistrict.put(districtName, di);
+				District district = new District(districtName, new DistrictInfo(asOf, type, progress));
+				districts.add(district);
 			}
-			Invasions invasions = new Invasions(invasionsPerDistrict);
-
-			data = new InvasionData(lastUpdated, "null", invasions);
-
-			in.close();
-			//Iterator it = data.getInvasions().getDistricts().entrySet().iterator();
-			invasionInfo = invasionsPerDistrict;
-			/*while(it.hasNext()){
-				Map.Entry pairs = (Map.Entry)it.next();
-		        it.remove();		        
-			}*/
-
-
-			TextView amountOfInvasions = (TextView) findViewById(R.id.amountofinvasions);
-			amountOfInvasions.setText(invasionInfo.size()+"");
+			data = new InvasionData(lastUpdated, "null", districts);
 		}catch( IOException e){
 			e.printStackTrace();
 		}
@@ -114,12 +103,12 @@ public class CurrentInvasions extends Activity {
 		this.gson = gson;
 	}
 
-	public static InvasionData getData() {
+	public InvasionData getData() {
 		return data;
 	}
 
-	public static void setData(InvasionData data) {
-		CurrentInvasions.data = data;
+	public void setData(InvasionData data) {
+		this.data = data;
 	}
 
 	public static Map<String, DistrictInfo> getInvasionInfo() {
