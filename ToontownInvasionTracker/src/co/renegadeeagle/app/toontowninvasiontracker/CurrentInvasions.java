@@ -6,14 +6,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import co.renegadeeagle.app.toontowninvasiontracker.InvasionData.District;
 import co.renegadeeagle.app.toontowninvasiontracker.InvasionData.DistrictInfo;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -21,29 +26,35 @@ import com.google.gson.JsonParser;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.v4.app.NotificationCompat.Action;
+import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class CurrentInvasions extends Activity {
 
 	Gson gson = new Gson();
 	private static InvasionData data;
 	public static Map<String, DistrictInfo> invasionInfo;
+	ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+		this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		setContentView(R.layout.activity_current_invasions);
-
 		update();
-	} 
-
+	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.current_invasions, menu);
 		return true;
 	} 
-	int currentInvasions = 10;
 
 	URL url;
 	HttpURLConnection connection = null;
@@ -53,8 +64,10 @@ public class CurrentInvasions extends Activity {
 	 * First time effectively using gson wen't well, I guess.
 	 */
 	public void update() {
+		Toast toast = Toast.makeText(this, "Updating...", Toast.LENGTH_SHORT);
+		toast.show();
 		try{
-			url = new URL("http://renegadeeagle.co/testjson");
+			url = new URL("https://www.toontownrewritten.com/api/invasions");
 			//http://renegadeeagle.co/testjson
 			HttpURLConnection con = (HttpURLConnection) url.openConnection();
 			con.setRequestMethod("GET");
@@ -90,6 +103,8 @@ public class CurrentInvasions extends Activity {
 				districts.add(district);
 			}
 			data = new InvasionData(lastUpdated, "null", districts);
+			AddInvasionDetails add = new AddInvasionDetails(this);
+			add.addDetails();
 		}catch( IOException e){
 			e.printStackTrace();
 		}
@@ -103,28 +118,15 @@ public class CurrentInvasions extends Activity {
 		this.gson = gson;
 	}
 
-	public InvasionData getData() {
+	public static InvasionData getData() {
 		return data;
 	}
-
-	public void setData(InvasionData data) {
-		this.data = data;
-	}
-
 	public static Map<String, DistrictInfo> getInvasionInfo() {
 		return invasionInfo;
 	}
 
 	public static void setInvasionInfo(Map<String, DistrictInfo> invasionInfo) {
 		CurrentInvasions.invasionInfo = invasionInfo;
-	}
-
-	public int getCurrentInvasions() {
-		return currentInvasions;
-	}
-
-	public void setCurrentInvasions(int currentInvasions) {
-		this.currentInvasions = currentInvasions;
 	}
 
 	public URL getUrl() {
@@ -139,7 +141,7 @@ public class CurrentInvasions extends Activity {
 		return connection;
 	}
 
-	public void setConnection(HttpURLConnection connection) {
+	public  void setConnection(HttpURLConnection connection) {
 		this.connection = connection;
 	}
 
@@ -157,6 +159,14 @@ public class CurrentInvasions extends Activity {
 
 	public void setParser(JsonParser parser) {
 		this.parser = parser;
+	}
+	public boolean onKeyUp(int keyCode, KeyEvent event) {
+		if (keyCode == KeyEvent.KEYCODE_MENU) {
+			update();
+			return true;
+
+		}
+		return super.onKeyUp(keyCode, event);
 	}
 
 }
